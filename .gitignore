@@ -1,0 +1,57 @@
+# Evidence and samples: never commit. Link to the original source instead.
+*.pcap
+*.pcapng
+*.cap
+*.etl
+*.evtx
+*.eml
+*.msg
+*.zip
+*.7z
+*.rar
+*.gz
+*.tgz
+*.tar
+*.iso
+*.img
+*.vhd
+*.vhdx
+*.qcow2
+*.ova
+*.mem
+*.dmp
+*.raw
+
+# Executables and scripts from samples
+*.exe
+*.dll
+*.scr
+*.msi
+*.bin
+*.elf
+*.jar
+*.apk
+*.lnk
+*.hta
+*.vbs
+
+# Keys, passwords and local settings
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+*.crt
+*.kdbx
+*.publishsettings
+*.local.json
+*.local.bicepparam
+secrets/
+.azure/
+
+# Editor files
+.vscode/
+.DS_Store
+*.swp
+__pycache__/
