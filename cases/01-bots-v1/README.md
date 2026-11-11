@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Data source | [Splunk Boss of the SOC v1](https://github.com/splunk/botsv1), attack-only version (CC0-1.0). Not copied here. |
-| Data dates | [TODO] first and last event time |
+| Data dates | 2016-08-10 03:28:51 to 2016-08-24 18:27:44 UTC | 
 | Platform | Splunk Enterprise 10.6.1.1, Trial license, on the lab ThinkPad (Fedora 44). Splunk Web and the management port listen on 127.0.0.1 only. |
 | Tools | Splunk ([TODO] OSINT sites used) |
 | ATT&CK | [TODO] |
@@ -14,7 +14,7 @@
 
 Done before the investigation, so that "0 results" can be trusted.
 
-- 955,807 events in 22 sourcetypes (inventory with `tstats`). Exhibit: [TODO] `exhibits/01-data-inventory.png`
+- 955,807 events in 22 sourcetypes (inventory with `tstats`). Exhibit: [`exhibits/01-data-inventory.png`](exhibits/01-data-inventory.png)
 - Attack-only dataset: most normal traffic is missing, so the attack is easier to see than in a real SOC.
 - Add-ons: only the Sysmon add-on (`Splunk_TA_microsoft_sysmon`). The other add-ons in the BOTS v1 README are not installed. The fields below work without them.
 - The BOTS v1 data is from 2016. The time picker must be "All time" (or `earliest=0`).
