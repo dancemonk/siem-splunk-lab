@@ -8,4 +8,4 @@ I always chec the tool and the data I have before I start searchin. Then I can t
 
 ## Commands and SPL I want to remember
 
-- 'ss -tln': shows which TCP ports are listening on this machine, and on which address. '127.0.0.1' means only this machine can connect; '0.0.0.0' or '*' means any device on the network. I used it to check that Splunk is not open to my network.
+-  `ss -tln`: shows which TCP ports are listening on this machine, and on which address. '127.0.0.1' means only this machine can connect; '0.0.0.0' or '*' means any device on the network. I used it to check that Splunk is not open to my network.
