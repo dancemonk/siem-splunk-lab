@@ -35,14 +35,14 @@ The website shows a defacement page: imreallynotbatman[.]com
 
 ## 2. Hypotheses
 
-**[1] - A developer or admin changed the page.**
-- **Supports:** the change comes from an internal IP, which no scanning or attack attempts before it.
+**H1 - A developer or admin changed the page.**
+- **Supports:** the change comes from an internal IP, with no scanning or attack attempts before it.
 - **Rules out:** the change comes from an external IP, or follows attack attempts such as a vulnerability scan.
-- **Where to lok:** `iis` (web server log), `stream:http` (every web request), `suricata` (IDS alerts).
+- **Where to look:** `iis` (web server log), `stream:http` (every web request), `suricata` (IDS alerts).
 
-**[2] - An outsider got in, through stolen access (for example phishing) or a web application flaw.**
+**H2 - An outsider got in, through stolen access (for example phishing) or a web application flaw.**
 - **Supports:** attempts to get into the system from an external IP before the page changed, then a request that succeeds.
-- **Rules out:** no attck attempts at all, and the change comes from an internal IP.
+- **Rules out:** no attack attempts at all, and the change comes from an internal IP.
 - **Where to look:** the same logs. Also check the server's answer to the attack requests: an error (404, 500) or success (200).
 
 ## 3. Exhibits

@@ -1,6 +1,6 @@
 # Case 01 worklog
 
-Working notes during the investigation. Newest at the bottom. Searches 1-3 were given step by step while I learned SPL; from search 4, I write them myself.
+Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7 and 9 were given step by step while I learned SPL; the others I wrote myself.
 
 ## 2026-11-10
 
@@ -23,6 +23,8 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3 were 
 - Meaning: a user agent can be faked. This shows a scan, but it does not prove the site was hacked: I still need to see how the server answered.
 - Thought: the scan could be an authorized pentest. To check: is there an approved test? A pentest would not explain the defacement.
 
+## 2026-11-11
+
 **4. What did the Python script (`23.22.63[.]114`) request?**
 - Search: 
     - `index=botsv1 earliest=0 sourcetype=stream:http imreallynotbatman.com src_ip=23.22.63[.]114 | stats count by http_method, uri_path | sort - count`
@@ -39,7 +41,7 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3 were 
 - Search: 
     - `index=botsv1 earliest=0 sourcetype=stream:http imreallynotbatman.com http_method=POST | rex field=form_data "passwd=(?<password>[^&]+)" | stats count, values(src_ip) AS ips by password | where count > 1`
 - Result: the script tried 412 different passwords, each once. Across all 14,238 POSTs, only `batman` was sent twice: by `23.22.63[.]114` and by `40.80.148[.]42`.
-- Meaning: the two IPs are related: the same attacker with different tools.
+- Meaning: the two IPs are very likely the same attacker, using different tools.
 
 **7. Who sent `batman` first?**
 - Search: 
@@ -57,4 +59,11 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3 were 
 - Search: 
     - `index=botsv1 earliest=0 sourcetype=stream:http src_ip=40.80.148[.]42 http_method=POST part_filename=* | table _time, uri_path, part_filename | sort _time`
 - Result: one upload, `agent.php`, at 21:50:31.
-- Meaning: [TODO]
+- Meaning: `agent.php` is an obfuscated PHP web shell (T1505.003, obfuscation T1027), uploaded through Joomla's Extension Installer (`com_installer`) with install folder `C:\inetpub\wwwroot\joomla\tmp`. The web server runs Windows / IIS. The code is not copied here (malware).
+
+**10. Did the attacker use the web shell?**
+- Search:
+    - `index=botsv1 earliest=0 sourcetype=stream:http agent.php | stats count by src_ip, http_method, uri_path _time | sort _time`
+- Result: from 21:55:22, `23.22.63[.]114` sends many GET requests to `/joomla/agent.php`, a few per second. In one request (22:21:34): a strange `Accept-Language` (`it-CH,pa;q=0.5,ps;q=0.7,pa;q=0.8`), a fake Google `Referer`, and a fake Safari user agent. The reply is `<34819d7b>...</34819d7b>`: the same key as in the `agent.php` code (`$kh` + `$kf`).
+- Meaning: the web shell was used about 5 minutes after the upload, by the brute force IP. The commands hide in the `Referer` and `Accept-Language` headers, and the reply is encoded. The website's public IP is `71.39.18[.]126`; the web server's internal IP is `192.168.250.70`.
+- Next: what the commands did on `192.168.250.70` (Sysmon).
