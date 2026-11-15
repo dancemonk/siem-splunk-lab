@@ -6,9 +6,9 @@
 | Data dates | 2016-08-10 03:28:51 to 2016-08-24 18:27:44 UTC | 
 | Platform | Splunk Enterprise 10.6.1.1, Trial license, on the lab ThinkPad (Fedora 44). Splunk Web and the management port listen on 127.0.0.1 only. |
 | Tools | Splunk, VirusTotal (hash lookup only), Fortinet docs |
-| ATT&CK | [TODO] |
-| Hours | [TODO] |
-| Status | [TODO] |
+| ATT&CK | Web attack: T1595.002 Vulnerability Scanning, T1110.001 Password Guessing, T1078 Valid Accounts, T1505.003 Web Shell, T1027 Obfuscated Files or Information, T1059.003 Windows Command Shell, T1571 Non-Standard Port, T1105 Ingress Tool Transfer, T1491.002 External Defacement |
+| Hours | About 8-10 |
+| Status | Web attack: investigation, verdict, ticket and handover done. Detection and takeaway [TODO]. Ransomware part not started. |
 
 ## 0. Data check (2026-11-10)
 
