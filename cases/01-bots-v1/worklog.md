@@ -1,6 +1,6 @@
 # Case 01 worklog
 
-Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7, 9, 13 and 14 were given step by step while I learned SPL; the others I wrote myself.
+Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7, 9, 13, 14, 16 and 17 were given step by step while I learned SPL; the others I wrote myself.
 
 ## 2026-11-10
 
@@ -104,3 +104,22 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7
 - Result: 21:56:19, `192.168.250.70` to `23.22.63[.]114`, port 3791, one second after the start.
 - Meaning: a reverse shell. The web server connected OUT to the attacker: the same IP as the brute force and the web shell. The port is the same as the file name.
 - Open: where `3791.exe` came from; does the firewall log (`fgt_traffic`) show this connection?
+
+## 2026-11-15
+
+**16. Which logs mention `3791.exe`?** (given)
+- Search:
+    - `index=botsv1 earliest=0 3791.exe | stats count by sourcetype | sort - count`
+- Result: `XmlWinEventLog` 69, `WinEventLog:Security` 3, `stream:http` 2, `fgt_utm` 1, `suricata` 1.
+- Meaning: the file travelled over the network. The web traffic, the firewall and the IDS all saw it.
+
+**17. How did `3791.exe` get onto the server?** (given)
+- Search:
+    - `index=botsv1 earliest=0 3791.exe sourcetype IN ("stream:http", "fgt_utm", "suricata") | sort _time`
+- Result:
+    - 21:52:45 `fgt_utm`: "File is infected.", virus `W32/Swrort.C!tr`, file `3791.exe`, from `40.80.148[.]42` to the web server. Its checksum is the same SHA256 as in entry 14. `action=monitored`, level critical, profile `Honeypot-Access`.
+    - 21:52:47 `stream:http`: one eXtplorer upload (POST) with two files, `3791.exe` and `agent.php`. Server answer: "Upload successful!".
+    - 21:52:47 `suricata`: a `fileinfo` event for `3791.exe` (logged, no alert).
+    - 21:52:47 `stream:http`: eXtplorer lists `/joomla`: `3791.exe` (72.07 KB) and `agent.php` (1.47 KB) are there. Every folder has permissions `777` (anyone can write).
+- Meaning: `40.80.148[.]42` uploaded both files with eXtplorer at 21:52:47. The firewall recognised the malware but only logged it (monitor mode), so the file got through. An analyst had about 3.5 minutes to act on that critical alert before the reverse shell (21:56:18). The first `agent.php` upload through the Joomla installer (21:50:31) most likely failed (no success message); the working copy came through eXtplorer. Permissions `777` made the upload easy.
+- Note: the same second shows as 21:52:47 UTC in Splunk, 15:52:47 in the firewall and IDS (UTC-6) and 14:52 in the file list (web server, UTC-7). The timeline uses UTC.
