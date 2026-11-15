@@ -1,6 +1,6 @@
 # Case 01 worklog
 
-Working notes during the investigation. Newest at the bottom. My mentor suggested searches 1-3, 6, 7, 9, 13, 14 and 16-24 while I was learning SPL; I wrote the others.
+Working notes during the investigation. Newest at the bottom. My mentor suggested searches 1-3, 6, 7, 9, 13, 14 and 16-27 while I was learning SPL; I wrote the others.
 
 ## 2026-11-10
 
@@ -141,13 +141,14 @@ Working notes during the investigation. Newest at the bottom. My mentor suggeste
     - `index=botsv1 earliest=0 sourcetype=stream:http src_ip=192.168.250.70 dest_ip=23.22.63[.]114 | table _time, http_method, site, uri_path, status, http_user_agent | sort _time`
 - Result: 22:06:21 and 22:13:46, GET `/poisonivy-is-coming-for-you-batman.jpeg`. Status and user agent are empty.
 - Meaning: both downloads are before `move ..\1.jpeg 2.jpeg` (22:20:10), so the order fits: downloaded, most likely saved as `1.jpeg`, then renamed. The empty user agent means the program did not introduce itself, so it was not a browser. An empty user agent in traffic going out from a server is a detection idea.
+- Update (entry 27): these two tries failed. The server got only 212 bytes back each time. The image came with a third connection at 22:19:11.
 
 **21. Which program made the download?**
 - Search:
     - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog EventCode=3 DestinationPort=1337 | table _time, Image, SourceIp, DestinationIp, DestinationPort | sort _time`
 - Result: `php-cgi.exe` connected from `192.168.250.70` to `23.22.63[.]114:1337` three times: 22:06:22, 22:13:48, 22:19:11.
 - Meaning: PHP itself made the download, not `cmd.exe`. That is why there is no download command among the 17 `cmd.exe` commands (entry 12): the web shell ran it as PHP code. A search for `cmd.exe` alone would miss this download.
-- Open: Sysmon shows 3 connections, `stream:http` only 2 downloads. Maybe the third was not HTTP, or it failed or was not captured. [OPEN]
+- Open: Sysmon shows 3 connections, `stream:http` only 2 downloads. Maybe the third was not HTTP, or it failed or was not captured. Answered in entry 27.
 
 **22. Was the web shell used at the download times?**
 - Search:
@@ -172,4 +173,26 @@ Working notes during the investigation. Newest at the bottom. My mentor suggeste
     - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog 3791.exe EventCode=5 | table _time, Image`
 - Result: 22:21:58, `C:\inetpub\wwwroot\joomla\3791.exe` ended (Sysmon EventCode 5, process ended).
 - Meaning: the program ended at 22:21:58 and the firewall logged the connection close at 22:22:03, 5 seconds later, so the reverse shell ended because `3791.exe` stopped. This was about 30 seconds after the last web shell commands (`exit`, 22:21:31 and 22:21:34) and 1.5 minutes after the defacement (22:20:33). It looks like the attacker finished and closed everything. The `exit` commands went through the web shell (`php-cgi` to `cmd.exe`), not through the reverse shell, so they did not close it directly.
-- Open: what stopped `3791.exe` (the attacker from their side, or something on the server). [OPEN]
+- Open: what stopped `3791.exe` (the attacker from their side, or something on the server). Answered in entries 25 and 26.
+
+**25. Did anything on the server kill `3791.exe`?**
+- Search:
+    - `index=botsv1 earliest="08/10/2016:21:56:00" latest="08/10/2016:22:23:00" sourcetype=XmlWinEventLog EventCode=1 host=we1149srv | table _time, ParentImage, Image, CommandLine | search CommandLine="*kill*" OR ParentImage="*3791.exe*" | sort _time`
+- Result: 2 events, the two `cmd.exe` started by `3791.exe` at 21:58:23 and 22:08:13 (`C:\Windows\SysWOW64\cmd.exe`). No process with "kill" in its command line.
+- Meaning: no program was started on the server to stop `3791.exe`. SysWOW64 holds the 32-bit Windows programs, so `3791.exe` is a 32-bit program.
+
+**26. How did `3791.exe` end?**
+- Search:
+    - `index=botsv1 earliest=0 sourcetype=WinEventLog:Security 3791.exe | table _time, EventCode, Exit_Status, Process_Name, Account_Name | sort _time`
+- Result: 21:56:18, two events 4688 (process created), accounts `IUSR` and `joomla`. 22:21:58, event 4689 (process exited) for `C:\inetpub\wwwroot\joomla\3791.exe`, `Exit_Status` `0x0`, account `IUSR`.
+- Meaning: `3791.exe` exited normally (`0x0`), in the same second Sysmon logged in entry 24. With entry 25 (no kill command), the most likely reason is that the attacker closed the reverse shell from their side. It ran as `IUSR`, the IIS account for anonymous visitors, which is not an administrator.
+- Open: I did not check whether the attacker got more rights than `IUSR`. [OPEN]
+
+**27. What did the three connections to port 1337 carry?**
+- Search:
+    - `index=botsv1 earliest=0 sourcetype=fgt_traffic dstip=23.22.63[.]114 dstport=1337 | table _time, srcip, dstport, action, sentbyte, rcvdbyte, duration | sort _time`
+- Result: three rows from `192.168.250.70`, all `action=close`. The firewall logs a connection when it ends, so start = `_time` minus `duration`.
+    - 22:10:21, sent 318 bytes, received 212, 240 seconds: started 22:06:21.
+    - 22:17:46, sent 318, received 212, 240 seconds: started 22:13:46.
+    - 22:19:12, sent 8,038, received 569,600, 2 seconds: started 22:19:10.
+- Meaning: the start times match the three `php-cgi.exe` connections in entry 21 within one or two seconds. The first two tries got only 212 bytes and waited 240 seconds before closing, so they failed. That fits the empty status in entry 20. The third try got 569,600 bytes (about 556 KB) in 2 seconds: this is the image. The `move ..\1.jpeg 2.jpeg` at 22:20:10 came about one minute later. It also explains the burst of 43 web shell requests at 22:19 (entry 22). `stream:http` did not record this third download, and I do not know why.

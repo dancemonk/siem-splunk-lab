@@ -65,13 +65,13 @@ The website shows a defacement page: imreallynotbatman[.]com
 | 21:56:18 | `we1149srv` (`192.168.250.70`) | Web shell runs `3791.exe` (trojanized `ab.exe`, VirusTotal 63/68) | [w14a](exhibits/w14a-3791-process-starts-hl.png), [w14b](exhibits/w14b-3791-sha256-hl.png), [w14c](exhibits/w14c-3791-virustotal-hl.png) |
 | 21:56:19 | `192.168.250.70` to `23.22.63[.]114:3791` | Reverse shell to the attacker; the firewall allows it | [w15](exhibits/w15-reverse-shell-hl.png), [w23](exhibits/w23-firewall-reverse-shell-hl.png) |
 | 22:05:42 | `23.22.63[.]114` to `agent.php` | New web shell session (test command `echo 63059`) | [w22b](exhibits/w22b-webshell-first-requests-hl.png) |
-| 22:06:21 | `192.168.250.70` to `23.22.63[.]114:1337` | Web shell makes the server download `poisonivy-is-coming-for-you-batman.jpeg` | [w19](exhibits/w19-server-outbound-http-hl.png), [w20](exhibits/w20-downloaded-file-hl.png), [w21](exhibits/w21-download-process-hl.png), [w22a](exhibits/w22a-webshell-per-minute-hl.png) |
-| 22:13:46 | `192.168.250.70` to `23.22.63[.]114:1337` | Second download of the same image | [w20](exhibits/w20-downloaded-file-hl.png), [w21](exhibits/w21-download-process-hl.png) |
-| 22:19:11 | `192.168.250.70` to `23.22.63[.]114:1337` | Third `php-cgi.exe` connection; no HTTP download seen [OPEN] | [w21](exhibits/w21-download-process-hl.png) |
+| 22:06:21 | `192.168.250.70` to `23.22.63[.]114:1337` | Web shell makes the server request `poisonivy-is-coming-for-you-batman.jpeg`; the try fails (212 bytes back) | [w27](exhibits/w27-port-1337-firewall-hl.png), [w19](exhibits/w19-server-outbound-http-hl.png), [w20](exhibits/w20-downloaded-file-hl.png), [w21](exhibits/w21-download-process-hl.png), [w22a](exhibits/w22a-webshell-per-minute-hl.png) |
+| 22:13:46 | `192.168.250.70` to `23.22.63[.]114:1337` | Second try, fails the same way | [w27](exhibits/w27-port-1337-firewall-hl.png), [w20](exhibits/w20-downloaded-file-hl.png), [w21](exhibits/w21-download-process-hl.png) |
+| 22:19:11 | `192.168.250.70` to `23.22.63[.]114:1337` | Third try works: the server gets 569,600 bytes, the image | [w27](exhibits/w27-port-1337-firewall-hl.png), [w21](exhibits/w21-download-process-hl.png) |
 | 22:20:10 | `we1149srv` (`192.168.250.70`) | `move ..\1.jpeg 2.jpeg`: the image is moved into the website folder | [w12](exhibits/w12-webshell-commands-hl.png) |
 | 22:20:33 | `we1149srv` (`192.168.250.70`) | `move 2.jpeg imnotbatman.jpg`: the website's image is replaced (defacement) | [w12](exhibits/w12-webshell-commands-hl.png) |
 | 22:21:34 | `23.22.63[.]114` to `agent.php` | Last web shell commands (`exit`) | [w12](exhibits/w12-webshell-commands-hl.png) |
-| 22:21:58 | `we1149srv` (`192.168.250.70`) | `3791.exe` ends | [w24](exhibits/w24-3791-ended-hl.png) |
+| 22:21:58 | `we1149srv` (`192.168.250.70`) | `3791.exe` exits normally (exit code `0x0`), no kill command found | [w24](exhibits/w24-3791-ended-hl.png), [w25](exhibits/w25-no-kill-process-hl.png), [w26](exhibits/w26-3791-exit-status-hl.png) |
 | 22:22:03 | Firewall (FortiGate) | Firewall logs the reverse shell closed (open 1545 s, about 1.4 MB moved) | [w23](exhibits/w23-firewall-reverse-shell-hl.png) |
 
 ## 5. Verdict
@@ -82,7 +82,7 @@ One attacker used two IPs and two tools. `23.22.63[.]114` brute-forced the Jooml
 
 The proof comes from three separate log sources (web traffic, Sysmon and the firewall), and their times match within one or two seconds.
 
-Open: what stopped `3791.exe` at 22:21:58, and why the third `php-cgi.exe` connection at 22:19:11 shows no download.
+Open: whether the attacker got more rights than `IUSR`, the IIS account the web shell and `3791.exe` ran as.
 
 ## 6. Ticket
 
@@ -106,7 +106,7 @@ First thing to do: change the firewall profile `Honeypot-Access` from monitor to
 
 Also still to do: isolate the server, block `40.80.148[.]42` and `23.22.63[.]114`, reset the admin password, and remove `agent.php` and `3791.exe` after the evidence is saved.
 
-Open questions: what stopped `3791.exe` at 22:21:58, and why the third `php-cgi.exe` connection at 22:19:11 shows no download.
+Open question: whether the attacker got more rights than `IUSR`, the IIS account the web shell and `3791.exe` ran as. I found no sign of it, but I did not check for it.
 
 ## 8. Detection
 
