@@ -133,44 +133,12 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7
 **19. Did the web server download anything?** (given)
 - Search:
     - `index=botsv1 earliest=0 sourcetype=stream:http src_ip=192.168.250.70 | stats count by dest_ip, http_method, site | sort - count`
-- Result: two destinations. `update.joomla.org` (`108.161.187.134`) 5 GET; `23.22.63[.]114` (`prankglassinebracket.jumpingcrab[.]com:1337`) 2 GET.
+- Result: two destinations. `update.joomla.org` (`108.161.187[.]134`) 5 GET; `23.22.63[.]114` (`prankglassinebracket.jumpingcrab[.]com:1337`) 2 GET.
 - Meaning: Joomla checking for updates is normal. A GET to the attacker IP on port 1337 is not. Here the server is the client: the file was pulled (downloaded by the server), not pushed (uploaded). 1337 means "leet" in hacker slang and is not a normal web port.
 
 **20. What did the server download?** (given)
 - Search:
-    - `index=botsv1 earliest=0 sourcetype=stream:http src_ip=192.168.250.70 dest_ip=23.22.63.114 | table _time, http_method, site, uri_path, status, http_user_agent | sort _time`
-- Result: 22:06:21 and 22:13:46, GET `/poisonivy-is-coming-for-you-batman.jpeg`. Status and user agent are empty.
-- Meaning: both downloads are before `move ..\1.jpeg 2.jpeg` (22:20:10), so the order fits: downloaded, most likely saved as `1.jpeg`, then renamed. The empty user agent means the program did not introduce itself, so it was not a browser. An empty user agent in traffic going out from a server is a detection idea.
-
-**21. Which program made the download?** (given)
-- Search:
-    - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog EventCode=3 DestinationPort=1337 | table _time, Image, SourceIp, DestinationIp, DestinationPort | sort _time`
-- Result: `php-cgi.exe` connected from `192.168.250.70` to `23.22.63[.]114:1337` three times: 22:06:22, 22:13:48, 22:19:11.
-- Meaning: PHP itself made the download, not `cmd.exe`. That is why there is no download command among the 17 `cmd.exe` commands (entry 12): the web shell ran it as PHP code. Hunting only for `cmd.exe` misses this.
-- Open: Sysmon shows 3 connections, `stream:http` only 2 downloads. Maybe the third was not HTTP, or it failed or was not captured. [OPEN]
-
-**22. Was the web shell used at the download times?** (given)
-- Search:
-    - `index=botsv1 earliest="08/10/2016:22:05:00" latest="08/10/2016:22:20:00" sourcetype=stream:http uri_path="/joomla/agent.php" | bin _time span=1m | stats count by _time`
-- Result: 96 requests from `23.22.63[.]114`. Per minute: 22:05 10, 22:06 14, 22:08 1, 22:13 14, 22:15 7, 22:16 7, 22:19 43.
-- Meaning: the bursts at 22:06, 22:13 and 22:19 are in the same minute as the three `php-cgi.exe` connections. `23.22.63[.]114` used the web shell to make the server pull the image from its own server on port 1337 (this conclusion was explained to me on the third try). The 22:05 burst starts with `echo 63059` at 22:05:42, like `echo 24365` at 21:55:22: a test that tells the attacker the web shell still works. It marks the start of each session.
-- SPL lesson: `head` before `sort` cut 10 events and hid the 22:05 burst. Sort first, or count per minute with `bin`.
-
-**18. Which logs mention `1.jpeg`?** (given)
-- Search:
-    - `index=botsv1 earliest=0 "1.jpeg" | stats count by sourcetype`
-- Result: `XmlWinEventLog` 2, `WinEventLog:Security` 1. No network log.
-- Meaning: only Windows knows the name `1.jpeg`. The file probably had a different name on the network and got the new name when it was saved.
-
-**19. Did the web server download anything?** (given)
-- Search:
-    - `index=botsv1 earliest=0 sourcetype=stream:http src_ip=192.168.250.70 | stats count by dest_ip, http_method, site | sort - count`
-- Result: two destinations. `update.joomla.org` (`108.161.187.134`) 5 GET; `23.22.63[.]114` (`prankglassinebracket.jumpingcrab[.]com:1337`) 2 GET.
-- Meaning: Joomla checking for updates is normal. A GET to the attacker IP on port 1337 is not. Here the server is the client: the file was pulled (downloaded by the server), not pushed (uploaded). 1337 means "leet" in hacker slang and is not a normal web port.
-
-**20. What did the server download?** (given)
-- Search:
-    - `index=botsv1 earliest=0 sourcetype=stream:http src_ip=192.168.250.70 dest_ip=23.22.63.114 | table _time, http_method, site, uri_path, status, http_user_agent | sort _time`
+    - `index=botsv1 earliest=0 sourcetype=stream:http src_ip=192.168.250.70 dest_ip=23.22.63[.]114 | table _time, http_method, site, uri_path, status, http_user_agent | sort _time`
 - Result: 22:06:21 and 22:13:46, GET `/poisonivy-is-coming-for-you-batman.jpeg`. Status and user agent are empty.
 - Meaning: both downloads are before `move ..\1.jpeg 2.jpeg` (22:20:10), so the order fits: downloaded, most likely saved as `1.jpeg`, then renamed. The empty user agent means the program did not introduce itself, so it was not a browser. An empty user agent in traffic going out from a server is a detection idea.
 
