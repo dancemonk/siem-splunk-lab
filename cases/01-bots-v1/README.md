@@ -8,7 +8,7 @@
 | Tools | Splunk, VirusTotal (hash lookup only), Fortinet docs |
 | ATT&CK | Web attack: T1595.002 Vulnerability Scanning, T1110.001 Password Guessing, T1078 Valid Accounts, T1505.003 Web Shell, T1027 Obfuscated Files or Information, T1059.003 Windows Command Shell, T1033 System Owner/User Discovery, T1087.001 Local Account Discovery, T1135 Network Share Discovery, T1049 System Network Connections Discovery, T1018 Remote System Discovery, T1057 Process Discovery, T1571 Non-Standard Port, T1105 Ingress Tool Transfer, T1491.002 External Defacement |
 | Hours | About 8-10 |
-| Status | Web attack: investigation, verdict, ticket and handover done. Detection and takeaway [TODO]. Ransomware part not started. |
+| Status | Web attack: investigation, verdict, ticket and handover done. Detection D01 done. Takeaway [TODO]. Ransomware part not started. |
 
 ## 0. Data check (2026-11-10)
 
@@ -113,7 +113,7 @@ The attacker stayed at `IUSR` rights and did not create an account (worklog 28 a
 
 ## 8. Detection
 
-[TODO]
+[D01: Web server starts a command shell](../../detections/d01-web-server-starts-shell.md). It looks for IIS (`w3wp.exe`) or PHP (`php-cgi.exe`) starting `cmd.exe` or `powershell.exe`. On BOTS v1 it finds all 17 web shell commands as one alert for `we1149srv`, and nothing before the attack.
 
 ## 9. Takeaway
 
