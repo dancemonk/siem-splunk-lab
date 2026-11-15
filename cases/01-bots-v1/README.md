@@ -86,11 +86,27 @@ Open: what stopped `3791.exe` at 22:21:58, and why the third `php-cgi.exe` conne
 
 ## 6. Ticket
 
-[TODO]
+| Field | Value |
+|---|---|
+| Ticket | INC-01 (lab) |
+| Title | Web server `we1149srv` compromised, website imreallynotbatman[.]com defaced |
+| Severity | Critical |
+| Status | Escalated to Tier 2 / incident response |
+| Asset | `we1149srv` (`192.168.250.70`), Windows with IIS and Joomla |
+| Attack window | 2016-08-10, 21:36:45 to 22:22:03 UTC |
+| Attacker | `40.80.148[.]42` and `23.22.63[.]114` (also `prankglassinebracket.jumpingcrab[.]com`) |
+| Malware | `agent.php` (PHP web shell), `3791.exe` (SHA256 `EC78C938D8453739CA2A370B9C275971EC46CAF6E479DE2B2D04E97CC47FA45D`) |
+| Recommended actions | 1. Isolate `we1149srv` from the network. 2. Block both attacker IPs at the firewall. 3. Reset the Joomla admin password. 4. Save the evidence, then remove `agent.php` and `3791.exe`. |
 
 ## 7. Shift handover note
 
-[TODO]
+Ticket INC-01 is escalated to Tier 2 / IR as Critical. The web server `we1149srv` was taken over through the Joomla admin account: the password `batman` was found by brute force. The attacker uploaded a web shell and a Metasploit payload, had a reverse shell for about 26 minutes and replaced the website image. The last attacker activity I found was at 22:22:03 UTC.
+
+First thing to do: change the firewall profile `Honeypot-Access` from monitor to block. It detected `W32/Swrort.C!tr` in `3791.exe` at 21:52:45 but let the file through (`action=monitored`), so the same upload would work again today.
+
+Also still to do: isolate the server, block `40.80.148[.]42` and `23.22.63[.]114`, reset the admin password, and remove `agent.php` and `3791.exe` after the evidence is saved.
+
+Open questions: what stopped `3791.exe` at 22:21:58, and why the third `php-cgi.exe` connection at 22:19:11 shows no download.
 
 ## 8. Detection
 
