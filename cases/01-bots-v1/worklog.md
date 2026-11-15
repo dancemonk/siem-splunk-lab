@@ -1,6 +1,6 @@
 # Case 01 worklog
 
-Working notes during the investigation. Newest at the bottom. My mentor suggested searches 1-3, 6, 7, 9, 13, 14 and 16-27 while I was learning SPL; I wrote the others.
+Working notes during the investigation. Newest at the bottom. My mentor suggested searches 1-3, 6, 7, 9, 13, 14 and 16-32 while I was learning SPL; I wrote the others.
 
 ## 2026-11-10
 
@@ -81,7 +81,7 @@ Working notes during the investigation. Newest at the bottom. My mentor suggeste
     - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog EventCode=1 Image="*cmd.exe" ParentImage="*php-cgi.exe" | table _time CommandLine | sort _time`
 - Result: 17 commands from 21:55:22 to 22:21:34. First `echo 24365` (a test), then `dir`, `ls`, `ifconfig`; 21:56:18 `3791.exe`; more `dir`; 22:20:10 `move ..\1.jpeg 2.jpeg`; 22:20:33 `move 2.jpeg imnotbatman.jpg`; then `exit`. (`2&gt;&amp;1` is `2>&1` in HTML escaping: show errors too.)
 - Meaning: the first command runs in the same second as the first `agent.php` request, so the network and host logs match. `ls` and `ifconfig` are Linux commands that fail on Windows: the attacker or the tool did not check the operating system first. The two `move` commands most likely made the defacement: an image file gets the name the website uses (`imnotbatman.jpg`), so the page shows the picture of the attacker.
-- Open: where `1.jpeg` came from; whether visitors really got the new image after 22:20:33.
+- Open: where `1.jpeg` came from; whether visitors really got the new image after 22:20:33. Answered in entries 18-27 and 30.
 
 ## 2026-11-14
 
@@ -103,7 +103,7 @@ Working notes during the investigation. Newest at the bottom. My mentor suggeste
     - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog 3791.exe EventCode=3 | table _time SourceIp DestinationIp DestinationPort Image`
 - Result: 21:56:19, `192.168.250.70` to `23.22.63[.]114`, port 3791, one second after the start.
 - Meaning: a reverse shell. The web server connected OUT to the attacker: the same IP as the brute force and the web shell. The port is the same as the file name.
-- Open: where `3791.exe` came from; does the firewall log (`fgt_traffic`) show this connection?
+- Open: where `3791.exe` came from; does the firewall log (`fgt_traffic`) show this connection? Answered in entries 17 and 23.
 
 ## 2026-11-15
 
@@ -164,7 +164,7 @@ Working notes during the investigation. Newest at the bottom. My mentor suggeste
     - Row 1: `action=close`, `sentbyte` 112,524, `rcvdbyte` 1,336,289 (about 1.3 MB), `duration` 1545 seconds.
     - Row 2: `action=ip-conn`, no bytes.
 - Meaning: a blocked connection cannot move 1.4 MB, so the firewall allowed the reverse shell and the attacker had a working shell. FortiGate writes a traffic log when a connection ends: 22:22:03 minus 1545 seconds (25 min 45 s) is 21:56:18, one second from the Sysmon connection in entry 15 (21:56:19). So it is the same connection, and it stayed open for almost 26 minutes while the attacker worked on the server. There was no egress filtering: the web server could open a connection to the internet on an unusual port.
-- `ip-conn` (I looked this up in Fortinet's docs): traffic allowed, but the session closed because the FortiGate got no reply packet. Row 2 is probably a second connection attempt that got no answer, maybe because the attacker's listener was already gone. [OPEN]
+- `ip-conn` (I looked this up in Fortinet's docs): traffic allowed, but the session closed because the FortiGate got no reply packet. Row 2 is probably a second connection attempt that got no answer, maybe because the attacker's listener was already gone. Update (entry 31): it is the same session, not a second attempt.
 - Source: [Fortinet: ip-conn traffic action in logs](https://community.fortinet.com/fortigate-3/technical-tip-ip-conn-traffic-action-in-logs-99859)
 - Field names: FortiGate calls the source IP `srcip`, Sysmon calls it `SourceIp` and `stream:http` calls it `src_ip`. I check the names before I search one sourcetype.
 
@@ -186,7 +186,7 @@ Working notes during the investigation. Newest at the bottom. My mentor suggeste
     - `index=botsv1 earliest=0 sourcetype=WinEventLog:Security 3791.exe | table _time, EventCode, Exit_Status, Process_Name, Account_Name | sort _time`
 - Result: 21:56:18, two events 4688 (process created), accounts `IUSR` and `joomla`. 22:21:58, event 4689 (process exited) for `C:\inetpub\wwwroot\joomla\3791.exe`, `Exit_Status` `0x0`, account `IUSR`.
 - Meaning: `3791.exe` exited normally (`0x0`), in the same second Sysmon logged in entry 24. With entry 25 (no kill command), the most likely reason is that the attacker closed the reverse shell from their side. It ran as `IUSR`, the IIS account for anonymous visitors, which is not an administrator.
-- Open: I did not check whether the attacker got more rights than `IUSR`. [OPEN]
+- Open: I did not check whether the attacker got more rights than `IUSR`. Answered in entries 28 and 29.
 
 **27. What did the three connections to port 1337 carry?**
 - Search:
@@ -195,4 +195,38 @@ Working notes during the investigation. Newest at the bottom. My mentor suggeste
     - 22:10:21, sent 318 bytes, received 212, 240 seconds: started 22:06:21.
     - 22:17:46, sent 318, received 212, 240 seconds: started 22:13:46.
     - 22:19:12, sent 8,038, received 569,600, 2 seconds: started 22:19:10.
-- Meaning: the start times match the three `php-cgi.exe` connections in entry 21 within one or two seconds. The first two tries got only 212 bytes and waited 240 seconds before closing, so they failed. That fits the empty status in entry 20. The third try got 569,600 bytes (about 556 KB) in 2 seconds: this is the image. The `move ..\1.jpeg 2.jpeg` at 22:20:10 came about one minute later. It also explains the burst of 43 web shell requests at 22:19 (entry 22). `stream:http` did not record this third download, and I do not know why.
+- Meaning: the start times match the three `php-cgi.exe` connections in entry 21 within one or two seconds. The first two tries got only 212 bytes and waited 240 seconds before closing, so they failed. That fits the empty status in entry 20. The third try got 569,600 bytes (about 556 KB) in 2 seconds: this is the image. The `move ..\1.jpeg 2.jpeg` at 22:20:10 came about one minute later. It also explains the burst of 43 web shell requests at 22:19 (entry 22). `stream:http` did not record this third download, and I do not know why. Update (entry 32): it did record it, but without the IPs and the URL.
+
+**28. Did the attacker get more rights than `IUSR`?**
+- Search:
+    - `index=botsv1 earliest="08/10/2016:21:55:00" latest="08/10/2016:22:23:00" sourcetype=XmlWinEventLog EventCode=1 host=we1149srv | stats count by User, ParentImage, Image | sort - count`
+- Result: 62 process starts. Every process started by the web shell or by `3791.exe` (`cmd.exe`, `conhost.exe`, `net.exe`, `whoami.exe`, `tasklist.exe` and others) ran as `NT AUTHORITY\IUSR`. `NT AUTHORITY\SYSTEM` and `NETWORK SERVICE` only appear for `svchost.exe` starting `WmiPrvSE.exe`, and `IIS APPPOOL\joomla` only for `w3wp.exe` starting `php-cgi.exe`.
+- Meaning: the `SYSTEM`, `NETWORK SERVICE` and app pool rows are normal Windows and IIS activity, not started by the attacker. In the attack window the attacker never ran anything as an administrator or `SYSTEM`.
+
+**29. What did the attacker run in the reverse shell?**
+- Search:
+    - `index=botsv1 earliest="08/10/2016:21:55:00" latest="08/10/2016:22:23:00" sourcetype=XmlWinEventLog EventCode=1 host=we1149srv User="*IUSR" ParentImage="*cmd.exe" Image!="*conhost.exe" | table _time, ParentImage, Image, CommandLine | sort _time`
+- Result: 13 programs started by `cmd.exe`.
+    - 21:56:18 `3791.exe` (from the web shell, entry 14).
+    - 21:58:28 to 21:59:12: `net view /domain`, `whoami`, `net share`, `find`, `net session`, `net user`, `net use c:\share`.
+    - 22:11:06 to 22:11:30: `ping` and `nslookup` for `prankglassinebracket.jumpingcrab[.]com`, two tries with `hxxp://` in front, then the right name.
+    - 22:17:17 `help`, 22:17:22 `tasklist`.
+- Meaning: none of these are among the 17 web shell commands, and they start right after `3791.exe` opened `cmd.exe` (21:58:23 and 22:08:13), so the attacker typed them in the reverse shell. The first group is discovery: who am I, which users, shares and sessions exist, is there a domain. `net user` has no `/add`, so the attacker only listed the users and did not create an account. The `ping` and `nslookup` at 22:11 came after the first download failed (22:06) and before the second try (22:13): the attacker was checking that the web server could reach their own server. ATT&CK: T1033, T1087.001, T1135, T1049, T1018, T1057.
+
+**30. Did anyone load the defaced image?**
+- Search:
+    - `index=botsv1 earliest=0 imnotbatman | stats count by sourcetype`, then `index=botsv1 earliest=0 sourcetype=iis imnotbatman | table _time, c_ip, cs_method, cs_uri_stem, sc_status, sc_bytes | sort _time`
+- Result: the word is in 6 logs (`stream:http` 3,261, most of them the web page HTML that names the image). IIS has 13 requests for `/joomla/images/imnotbatman.jpg`, all from `40.80.148[.]42`: 12 at 21:41 (during the scan) and 1 at 22:21:19, status 200. `sc_bytes` is empty (not logged on this server).
+- Meaning: the only request after the `move` at 22:20:33 came from the attacker, 46 seconds later, to check that the defacement worked. No other visitor loaded the image in this data, but this is the attack-only dataset, so normal visitor traffic is mostly missing.
+
+**31. Is the `ip-conn` row a second connection?**
+- Search:
+    - `index=botsv1 earliest=0 sourcetype=fgt_traffic dstip=23.22.63[.]114 dstport=3791 | table _time, srcip, srcport, dstport, action, sessionid, sentbyte, rcvdbyte`
+- Result: both rows have source port 63394 and session ID 925156.
+- Meaning: it is one connection. The `ip-conn` row is an extra log line the firewall wrote when the session ended, not a second connection attempt. This fits Sysmon, which saw only one network connection from `3791.exe` (entry 13).
+
+**32. Why did entry 20 find only two downloads?**
+- Search:
+    - `index=botsv1 earliest="08/10/2016:22:19:00" latest="08/10/2016:22:20:00" 23.22.63[.]114 1337 | stats count by sourcetype`, then `index=botsv1 earliest="08/10/2016:22:19:00" latest="08/10/2016:22:20:00" sourcetype=stream:http 1337 | table _time, src_ip, dest_ip, dest_port, site, uri_path, status, bytes_in, bytes_out, http_user_agent`
+- Result: in that minute, 6 logs mention the attacker IP and 1337, including one `stream:http` event at 22:19:11.351. In that event `src_ip`, `dest_ip`, `site` and `uri_path` are empty; `bytes_in` 106, `bytes_out` 554,068. (The second row in the table is an unrelated search request that only contains the text 1337.)
+- Meaning: `stream:http` did record the third download: 554,068 bytes from the attacker's server, close to the 569,600 the firewall counted with the connection overhead. The event has no IP or URL fields, so my search by `src_ip` and `dest_ip` in entry 20 could not find it. A plain keyword search found it. Lesson: an event with empty fields is invisible to a field search.

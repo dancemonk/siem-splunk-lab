@@ -6,7 +6,7 @@
 | Data dates | 2016-08-10 03:28:51 to 2016-08-24 18:27:44 UTC | 
 | Platform | Splunk Enterprise 10.6.1.1, Trial license, on the lab ThinkPad (Fedora 44). Splunk Web and the management port listen on 127.0.0.1 only. |
 | Tools | Splunk, VirusTotal (hash lookup only), Fortinet docs |
-| ATT&CK | Web attack: T1595.002 Vulnerability Scanning, T1110.001 Password Guessing, T1078 Valid Accounts, T1505.003 Web Shell, T1027 Obfuscated Files or Information, T1059.003 Windows Command Shell, T1571 Non-Standard Port, T1105 Ingress Tool Transfer, T1491.002 External Defacement |
+| ATT&CK | Web attack: T1595.002 Vulnerability Scanning, T1110.001 Password Guessing, T1078 Valid Accounts, T1505.003 Web Shell, T1027 Obfuscated Files or Information, T1059.003 Windows Command Shell, T1033 System Owner/User Discovery, T1087.001 Local Account Discovery, T1135 Network Share Discovery, T1049 System Network Connections Discovery, T1018 Remote System Discovery, T1057 Process Discovery, T1571 Non-Standard Port, T1105 Ingress Tool Transfer, T1491.002 External Defacement |
 | Hours | About 8-10 |
 | Status | Web attack: investigation, verdict, ticket and handover done. Detection and takeaway [TODO]. Ransomware part not started. |
 
@@ -64,15 +64,18 @@ The website shows a defacement page: imreallynotbatman[.]com
 | 21:55:22 | `23.22.63[.]114` to `agent.php` | Web shell used for the first time (test command `echo 24365`) | [w10](exhibits/w10-webshell-used-hl.png), [w12](exhibits/w12-webshell-commands-hl.png) |
 | 21:56:18 | `we1149srv` (`192.168.250.70`) | Web shell runs `3791.exe` (trojanized `ab.exe`, VirusTotal 63/68) | [w14a](exhibits/w14a-3791-process-starts-hl.png), [w14b](exhibits/w14b-3791-sha256-hl.png), [w14c](exhibits/w14c-3791-virustotal-hl.png) |
 | 21:56:19 | `192.168.250.70` to `23.22.63[.]114:3791` | Reverse shell to the attacker; the firewall allows it | [w15](exhibits/w15-reverse-shell-hl.png), [w23](exhibits/w23-firewall-reverse-shell-hl.png) |
+| 21:58:28 | `we1149srv` (`192.168.250.70`) | In the reverse shell: `whoami`, `net user`, `net share`, `net session`, `net view /domain` (looking around, no new account) | [w28](exhibits/w28-accounts-attack-window-hl.png), [w29](exhibits/w29-reverse-shell-commands-hl.png) |
 | 22:05:42 | `23.22.63[.]114` to `agent.php` | New web shell session (test command `echo 63059`) | [w22b](exhibits/w22b-webshell-first-requests-hl.png) |
 | 22:06:21 | `192.168.250.70` to `23.22.63[.]114:1337` | Web shell makes the server request `poisonivy-is-coming-for-you-batman.jpeg`; the try fails (212 bytes back) | [w27](exhibits/w27-port-1337-firewall-hl.png), [w19](exhibits/w19-server-outbound-http-hl.png), [w20](exhibits/w20-downloaded-file-hl.png), [w21](exhibits/w21-download-process-hl.png), [w22a](exhibits/w22a-webshell-per-minute-hl.png) |
+| 22:11:06 | `we1149srv` (`192.168.250.70`) | `ping` and `nslookup` for the attacker's own server, after the first download failed | [w29](exhibits/w29-reverse-shell-commands-hl.png) |
 | 22:13:46 | `192.168.250.70` to `23.22.63[.]114:1337` | Second try, fails the same way | [w27](exhibits/w27-port-1337-firewall-hl.png), [w20](exhibits/w20-downloaded-file-hl.png), [w21](exhibits/w21-download-process-hl.png) |
-| 22:19:11 | `192.168.250.70` to `23.22.63[.]114:1337` | Third try works: the server gets 569,600 bytes, the image | [w27](exhibits/w27-port-1337-firewall-hl.png), [w21](exhibits/w21-download-process-hl.png) |
+| 22:19:11 | `192.168.250.70` to `23.22.63[.]114:1337` | Third try works: the server gets 569,600 bytes, the image | [w27](exhibits/w27-port-1337-firewall-hl.png), [w21](exhibits/w21-download-process-hl.png), [w32b](exhibits/w32b-third-download-stream-hl.png) |
 | 22:20:10 | `we1149srv` (`192.168.250.70`) | `move ..\1.jpeg 2.jpeg`: the image is moved into the website folder | [w12](exhibits/w12-webshell-commands-hl.png) |
 | 22:20:33 | `we1149srv` (`192.168.250.70`) | `move 2.jpeg imnotbatman.jpg`: the website's image is replaced (defacement) | [w12](exhibits/w12-webshell-commands-hl.png) |
+| 22:21:19 | `40.80.148[.]42` to website | Attacker loads the defaced image `imnotbatman.jpg` (status 200) | [w30](exhibits/w30-imnotbatman-iis-hl.png) |
 | 22:21:34 | `23.22.63[.]114` to `agent.php` | Last web shell commands (`exit`) | [w12](exhibits/w12-webshell-commands-hl.png) |
 | 22:21:58 | `we1149srv` (`192.168.250.70`) | `3791.exe` exits normally (exit code `0x0`), no kill command found | [w24](exhibits/w24-3791-ended-hl.png), [w25](exhibits/w25-no-kill-process-hl.png), [w26](exhibits/w26-3791-exit-status-hl.png) |
-| 22:22:03 | Firewall (FortiGate) | Firewall logs the reverse shell closed (open 1545 s, about 1.4 MB moved) | [w23](exhibits/w23-firewall-reverse-shell-hl.png) |
+| 22:22:03 | Firewall (FortiGate) | Firewall logs the reverse shell closed (open 1545 s, about 1.4 MB moved) | [w23](exhibits/w23-firewall-reverse-shell-hl.png), [w31](exhibits/w31-ip-conn-row-hl.png) |
 
 ## 5. Verdict
 
@@ -82,7 +85,7 @@ One attacker used two IPs and two tools. `23.22.63[.]114` brute-forced the Jooml
 
 The proof comes from three separate log sources (web traffic, Sysmon and the firewall), and their times match within one or two seconds.
 
-Open: whether the attacker got more rights than `IUSR`, the IIS account the web shell and `3791.exe` ran as.
+The attacker stayed at the rights of `IUSR`, the IIS account for anonymous visitors: no administrator rights and no new account ([w28](exhibits/w28-accounts-attack-window-hl.png), [w29](exhibits/w29-reverse-shell-commands-hl.png)). No open questions are left for the web attack.
 
 ## 6. Ticket
 
@@ -106,7 +109,7 @@ First thing to do: change the firewall profile `Honeypot-Access` from monitor to
 
 Also still to do: isolate the server, block `40.80.148[.]42` and `23.22.63[.]114`, reset the admin password, and remove `agent.php` and `3791.exe` after the evidence is saved.
 
-Open question: whether the attacker got more rights than `IUSR`, the IIS account the web shell and `3791.exe` ran as. I found no sign of it, but I did not check for it.
+The attacker stayed at `IUSR` rights and did not create an account (worklog 28 and 29). They ran discovery commands in the reverse shell (`whoami`, `net user`, `net share`). No open questions are left.
 
 ## 8. Detection
 
