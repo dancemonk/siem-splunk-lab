@@ -1,6 +1,6 @@
 # Case 01 worklog
 
-Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7 and 9 were given step by step while I learned SPL; the others I wrote myself.
+Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7, 9, 13 and 14 were given step by step while I learned SPL; the others I wrote myself.
 
 ## 2026-11-10
 
@@ -67,3 +67,40 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7
 - Result: from 21:55:22, `23.22.63[.]114` sends many GET requests to `/joomla/agent.php`, a few per second. In one request (22:21:34): a strange `Accept-Language` (`it-CH,pa;q=0.5,ps;q=0.7,pa;q=0.8`), a fake Google `Referer`, and a fake Safari user agent. The reply is `<34819d7b>...</34819d7b>`: the same key as in the `agent.php` code (`$kh` + `$kf`).
 - Meaning: the web shell was used about 5 minutes after the upload, by the brute force IP. The commands hide in the `Referer` and `Accept-Language` headers, and the reply is encoded. The website's public IP is `71.39.18[.]126`; the web server's internal IP is `192.168.250.70`.
 - Next: what the commands did on `192.168.250.70` (Sysmon).
+
+## 2026-11-12
+
+**11. Which programs did the web server start? (Sysmon)**
+- Search:
+    - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog EventCode=1 (ParentImage="*w3wp.exe" OR ParentImage="*php-cgi.exe") | stats count by host, ParentImage, Image`
+- Result: on host `we1149srv` (the web server, `192.168.250.70`): `w3wp.exe` (IIS) started `php-cgi.exe` 33 times, and `php-cgi.exe` started `cmd.exe` 17 times.
+- Meaning: IIS starting PHP is normal. PHP starting a command prompt is not: this is the web shell running commands on the server.
+
+**12. Which commands did the web shell run?**
+- Search:
+    - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog EventCode=1 Image="*cmd.exe" ParentImage="*php-cgi.exe" | table _time CommandLine | sort _time`
+- Result: 17 commands from 21:55:22 to 22:21:34. First `echo 24365` (a test), then `dir`, `ls`, `ifconfig`; 21:56:18 `3791.exe`; more `dir`; 22:20:10 `move ..\1.jpeg 2.jpeg`; 22:20:33 `move 2.jpeg imnotbatman.jpg`; then `exit`. (`2&gt;&amp;1` is `2>&1` in HTML escaping: show errors too.)
+- Meaning: the first command runs in the same second as the first `agent.php` request, so the network and host logs match. `ls` and `ifconfig` are Linux commands that fail on Windows: the attacker or the tool did not check the operating system first. The two `move` commands most likely made the defacement: an image file gets the name the website uses (`imnotbatman.jpg`), so the page shows the picture of the attacker.
+- Open: where `1.jpeg` came from; whether visitors really got the new image after 22:20:33.
+
+## 2026-11-14
+
+**13. What does Sysmon record about `3791.exe`?** (given)
+- Search:
+    - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog 3791.exe | stats count by EventCode | sort - count`
+- Result: EventCode 1 (process created) 5, 3 (network connection) 1, 5 (process ended) 1, 7 (DLL loaded) 62. No EventCode 11 (file created).
+- Meaning: most events are normal DLL loads. Sysmon did not record how the file got onto the disk.
+
+**14. Who started `3791.exe`, and what is its hash?** (given)
+- Search:
+    - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog 3791.exe EventCode=1 | search Image="*3791.exe" | rex field=Hashes "SHA256=(?<sha256>[^,]+)" | table _time, Image, sha256`
+- Result: 21:56:18, `php-cgi.exe` started `cmd.exe /c "3791.exe 2>&1"`, which started `C:\inetpub\wwwroot\joomla\3791.exe` (in the website folder). SHA256 `EC78C938D8453739CA2A370B9C275971EC46CAF6E479DE2B2D04E97CC47FA45D`. `3791.exe` then started `cmd.exe` at 21:58:23 and 22:08:13.
+- VirusTotal (hash search only, checked 2026-11-14): 63 of 68 vendors say malicious. First known as `ab.exe`, a trojanized ApacheBench (the default template of Metasploit msfvenom). Family label `swrort`; categories trojan, hacktool.
+- Meaning: known malware, very likely a Metasploit payload that gives the attacker a command shell. Note: in EventCode 7 rows the hash belongs to the loaded DLL, not to `3791.exe`.
+
+**15. Where did `3791.exe` connect?**
+- Search:
+    - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog 3791.exe EventCode=3 | table _time SourceIp DestinationIp DestinationPort Image`
+- Result: 21:56:19, `192.168.250.70` to `23.22.63[.]114`, port 3791, one second after the start.
+- Meaning: a reverse shell. The web server connected OUT to the attacker: the same IP as the brute force and the web shell. The port is the same as the file name.
+- Open: where `3791.exe` came from; does the firewall log (`fgt_traffic`) show this connection?
