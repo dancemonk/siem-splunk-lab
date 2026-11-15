@@ -37,13 +37,13 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7
 - Result: every attempt uses `username=admin`. The passwords come from a list of common passwords (`12345678`, `letmein`, `qwerty`...), about 14 per second, starting 2016-08-10 21:45:21 UTC.
 - Meaning: brute force with a wordlist against the `admin` account.
 
-**6. Was any password used more than once?** 
+**6. Was any password used more than once?** (given)
 - Search: 
     - `index=botsv1 earliest=0 sourcetype=stream:http imreallynotbatman.com http_method=POST | rex field=form_data "passwd=(?<password>[^&]+)" | stats count, values(src_ip) AS ips by password | where count > 1`
 - Result: the script tried 412 different passwords, each once. Across all 14,238 POSTs, only `batman` was sent twice: by `23.22.63[.]114` and by `40.80.148[.]42`.
 - Meaning: the two IPs are very likely the same attacker, using different tools.
 
-**7. Who sent `batman` first?**
+**7. Who sent `batman` first?** (given)
 - Search: 
     - `index=botsv1 earliest=0 sourcetype=stream:http imreallynotbatman.com http_method=POST | rex field=form_data "passwd=(?<password>[^&]+)" | where password="batman" | table _time, src_ip, http_user_agent, status | sort _time`
 - Result: 21:46:33 `23.22.63[.]114` (`Python-urllib/2.7`), then 21:48:05 `40.80.148[.]42` (Internet Explorer 11), 1 min 32 s later. Status 303 for both.
@@ -55,7 +55,7 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7
 - Result: admin pages load after the login. From 21:51:32 the admin file manager eXtplorer (`com_extplorer`) opens and lists files. 21:52:49: an `.exe` file icon. POSTs inside the admin area at 22:16-22:21.
 - Meaning: the same IP that tried to get into the admin site got in with `batman`. Only a logged-in admin can open the file manager.
 
-**9. Did the attacker upload a file?** 
+**9. Did the attacker upload a file?** (given)
 - Search: 
     - `index=botsv1 earliest=0 sourcetype=stream:http src_ip=40.80.148[.]42 http_method=POST part_filename=* | table _time, uri_path, part_filename | sort _time`
 - Result: one upload, `agent.php`, at 21:50:31.
