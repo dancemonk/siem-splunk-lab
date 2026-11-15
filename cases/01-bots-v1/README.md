@@ -14,7 +14,7 @@
 
 Done before the investigation, so that "0 results" can be trusted.
 
-- 955,807 events in 22 sourcetypes (inventory with `tstats`). Exhibit: [`exhibits/01-data-inventory.png`](exhibits/01-data-inventory.png)
+- 955,807 events in 22 sourcetypes (inventory with `tstats`). Exhibit: [`exhibits/data-check/dc1-tstats-inventory-2x.png`](exhibits/data-check/dc1-tstats-inventory-2x.png)
 - Attack-only dataset: most normal traffic is missing, so the attack is easier to see than in a real SOC.
 - Add-ons: only the Sysmon add-on (`Splunk_TA_microsoft_sysmon`). The other add-ons in the BOTS v1 README are not installed. The fields below work without them.
 - The BOTS v1 data is from 2016. The time picker must be "All time" (or `earliest=0`).
