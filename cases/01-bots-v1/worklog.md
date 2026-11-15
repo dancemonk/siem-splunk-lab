@@ -1,6 +1,6 @@
 # Case 01 worklog
 
-Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7, 9, 13, 14 and 16-22 were given step by step while I learned SPL; the others I wrote myself.
+Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7, 9, 13, 14 and 16-24 were given step by step while I learned SPL; the others I wrote myself.
 
 ## 2026-11-10
 
@@ -155,3 +155,21 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7
 - Result: 96 requests from `23.22.63[.]114`. Per minute: 22:05 10, 22:06 14, 22:08 1, 22:13 14, 22:15 7, 22:16 7, 22:19 43.
 - Meaning: the bursts at 22:06, 22:13 and 22:19 are in the same minute as the three `php-cgi.exe` connections. `23.22.63[.]114` used the web shell to make the server pull the image from its own server on port 1337 (this conclusion was explained to me on the third try). The 22:05 burst starts with `echo 63059` at 22:05:42, like `echo 24365` at 21:55:22: a test that tells the attacker the web shell still works. It marks the start of each session.
 - SPL lesson: `head` before `sort` cut 10 events and hid the 22:05 burst. Sort first, or count per minute with `bin`.
+
+**23. Did the firewall allow the reverse shell?** (given)
+- Search:
+    - `index=botsv1 earliest=0 sourcetype=fgt_traffic 23.22.63[.]114 dstport=3791 | table _time, srcip, dstip, dstport, action, sentbyte, rcvdbyte, duration | sort _time`
+- Result: two rows at 22:22:03, both `192.168.250.70` to `23.22.63[.]114`, port 3791.
+    - Row 1: `action=close`, `sentbyte` 112,524, `rcvdbyte` 1,336,289 (about 1.3 MB), `duration` 1545 seconds.
+    - Row 2: `action=ip-conn`, no bytes.
+- Meaning: a blocked connection cannot move 1.4 MB, so the firewall allowed the reverse shell and the attacker had a working shell. FortiGate writes a traffic log when a connection ends: 22:22:03 minus 1545 seconds (25 min 45 s) is 21:56:18, one second from the Sysmon connection in entry 15 (21:56:19). Same connection, open almost 26 minutes, the whole time the attacker worked on the server. (The start time was worked out for me.) No egress filtering: the web server could open a connection to the internet on an unusual port.
+- `ip-conn` (I looked this up in Fortinet's docs): traffic allowed, but the session closed because the FortiGate got no reply packet. Row 2 is probably a second connection attempt that got no answer, maybe because the attacker's listener was already gone. [OPEN]
+- Source: [Fortinet: ip-conn traffic action in logs](https://community.fortinet.com/fortigate-3/technical-tip-ip-conn-traffic-action-in-logs-99859)
+- Field names: FortiGate uses its own names (`srcip`, `dstip`, `dstport`), Sysmon uses `SourceIp`, `stream:http` uses `src_ip`. Same idea, three names. Check names before searching one sourcetype.
+
+**24. Why did the reverse shell end?** (given)
+- Search:
+    - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog 3791.exe EventCode=5 | table _time, Image`
+- Result: 22:21:58, `C:\inetpub\wwwroot\joomla\3791.exe` ended (Sysmon EventCode 5, process ended).
+- Meaning: the program ended at 22:21:58 and the firewall logged the connection close at 22:22:03, 5 seconds later. The reverse shell ended because `3791.exe` stopped. This is about 30 seconds after the last web shell commands (`exit`, 22:21:31 and 22:21:34) and 1.5 minutes after the defacement (22:20:33): the attacker finished the work and closed everything. The `exit` commands went through the web shell (`php-cgi` to `cmd.exe`), not through the reverse shell, so they did not close it directly. (This conclusion was given; I did not answer the check question.)
+- Open: what stopped `3791.exe` (the attacker from their side, or something on the server). [OPEN]
