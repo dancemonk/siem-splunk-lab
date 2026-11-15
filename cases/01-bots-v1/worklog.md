@@ -13,7 +13,7 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7
 **2. Who sent the most requests to the website?**
 - Search: 
     - `index=botsv1 earliest=0 sourcetype=stream:http imreallynotbatman.com | stats count by src_ip | sort - count`
-- Result: `40.80.148[.]42` 17,483 requests, `23.22.63[.]114` 1,235 requests.
+- Result: `40.80.148[.]42` 17,483 requests (first at 21:36:45), `23.22.63[.]114` 1,235 requests.
 - Meaning: a scanner makes many more requests than other sources, so `40.80.148[.]42` stands out.
 
 **3. What user agent does each IP send?**

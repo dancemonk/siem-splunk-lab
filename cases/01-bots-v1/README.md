@@ -53,7 +53,7 @@ The website shows a defacement page: imreallynotbatman[.]com
 
 | Time (UTC) | Host / IP | What happened | Exhibit |
 |---|---|---|---|
-| [TODO: first scan request] | `40.80.148[.]42` → website | Acunetix web scan of the website (17,483 requests in total) | – |
+| 21:36:45 | `40.80.148[.]42` → website | Acunetix web scan of the website (17,483 requests in total) | – |
 | 21:45:21 | `23.22.63[.]114` → website | Python script starts a brute force on the Joomla admin login (`username=admin`, 412 passwords) | [w04](exhibits/w04-python-login-page-hl.png), [w05](exhibits/w05-bruteforce-passwords-hl.png) |
 | 21:46:33 | `23.22.63[.]114` → website | Script tries the password `batman` | [w07](exhibits/w07-batman-time-order-hl.png) |
 | 21:48:05 | `40.80.148[.]42` → website | Browser (Internet Explorer 11) sends `batman`; the admin login works | [w07](exhibits/w07-batman-time-order-hl.png) |
