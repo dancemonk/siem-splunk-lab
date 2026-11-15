@@ -3,8 +3,7 @@
 Every resource used in this lab: datasets, courses, apps and docs.
 One row per resource. Newest rows at the bottom.
 
-**Status:** Not started, In progress, Done (date).
-**Proof path:** the file in this repo that shows the work.
+Status is Not started, In progress or Done (with the date). Proof path is the file in this repo that shows the work.
 
 | Weekend | Resource | Link | Status | Proof path |
 |---|---|---|---|---|

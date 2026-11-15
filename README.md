@@ -16,7 +16,7 @@ not copied.
 | Weekend | Dates | Focus | Status |
 |---|---|---|---|
 | 1 | 2026-11-10 | Lab check: Splunk 10.6, BOTS v1 data and fields | Done |
-| 2 | 2026-11-21 to 11-22 | SPL for investigation (`stats`, `eval`, `rex`), BOTS v1 web attack | Not started |
+| 2 | 2026-11-11 to 11-15 | SPL for investigation (`stats`, `rex`, `bin`), BOTS v1 web attack | Done (investigation) |
 | 3 | 2026-11-28 to 11-29 | Case 01 finished (BOTS v1), first detections | Not started |
 | 4 | 2026-12-05 to 12-06 | BOTS v2, data models and `tstats` (Case 02) | Not started |
 | 5 | 2026-12-12 to 12-13 | BOTS v3, cloud logs (Case 03) | Not started |
@@ -40,7 +40,7 @@ Every resource used is listed in [TRACKER.md](TRACKER.md).
 
 ## Assistance
 
-I use Claude (Anthropic) as a mentor and reviewer. It helped set up the repo structure, CI and templates, and it reviews my notes. The investigations, verdicts and SPL are my own work.
+I use Claude (an AI by Anthropic) as a mentor. It set up the repo structure, CI and templates, suggested some of the searches, and helped me write up parts of the worklog and timeline from my findings. I ran every search in my own Splunk lab.
 
 ## License
 

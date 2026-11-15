@@ -1,6 +1,6 @@
 # Case 01 worklog
 
-Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7, 9, 13, 14 and 16-24 were given step by step while I learned SPL; the others I wrote myself.
+Working notes during the investigation. Newest at the bottom. My mentor suggested searches 1-3, 6, 7, 9, 13, 14 and 16-24 while I was learning SPL; I wrote the others.
 
 ## 2026-11-10
 
@@ -37,13 +37,13 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7
 - Result: every attempt uses `username=admin`. The passwords come from a list of common passwords (`12345678`, `letmein`, `qwerty`...), about 14 per second, starting 2016-08-10 21:45:21 UTC.
 - Meaning: brute force with a wordlist against the `admin` account.
 
-**6. Was any password used more than once?** (given)
+**6. Was any password used more than once?**
 - Search: 
     - `index=botsv1 earliest=0 sourcetype=stream:http imreallynotbatman.com http_method=POST | rex field=form_data "passwd=(?<password>[^&]+)" | stats count, values(src_ip) AS ips by password | where count > 1`
 - Result: the script tried 412 different passwords, each once. Across all 14,238 POSTs, only `batman` was sent twice: by `23.22.63[.]114` and by `40.80.148[.]42`.
 - Meaning: the two IPs are very likely the same attacker, using different tools.
 
-**7. Who sent `batman` first?** (given)
+**7. Who sent `batman` first?**
 - Search: 
     - `index=botsv1 earliest=0 sourcetype=stream:http imreallynotbatman.com http_method=POST | rex field=form_data "passwd=(?<password>[^&]+)" | where password="batman" | table _time, src_ip, http_user_agent, status | sort _time`
 - Result: 21:46:33 `23.22.63[.]114` (`Python-urllib/2.7`), then 21:48:05 `40.80.148[.]42` (Internet Explorer 11), 1 min 32 s later. Status 303 for both.
@@ -55,7 +55,7 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7
 - Result: admin pages load after the login. From 21:51:32 the admin file manager eXtplorer (`com_extplorer`) opens and lists files. 21:52:49: an `.exe` file icon. POSTs inside the admin area at 22:16-22:21.
 - Meaning: the same IP that tried to get into the admin site got in with `batman`. Only a logged-in admin can open the file manager.
 
-**9. Did the attacker upload a file?** (given)
+**9. Did the attacker upload a file?**
 - Search: 
     - `index=botsv1 earliest=0 sourcetype=stream:http src_ip=40.80.148[.]42 http_method=POST part_filename=* | table _time, uri_path, part_filename | sort _time`
 - Result: one upload, `agent.php`, at 21:50:31.
@@ -85,13 +85,13 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7
 
 ## 2026-11-14
 
-**13. What does Sysmon record about `3791.exe`?** (given)
+**13. What does Sysmon record about `3791.exe`?**
 - Search:
     - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog 3791.exe | stats count by EventCode | sort - count`
 - Result: EventCode 1 (process created) 5, 3 (network connection) 1, 5 (process ended) 1, 7 (DLL loaded) 62. No EventCode 11 (file created).
 - Meaning: most events are normal DLL loads. Sysmon did not record how the file got onto the disk.
 
-**14. Who started `3791.exe`, and what is its hash?** (given)
+**14. Who started `3791.exe`, and what is its hash?**
 - Search:
     - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog 3791.exe EventCode=1 | search Image="*3791.exe" | rex field=Hashes "SHA256=(?<sha256>[^,]+)" | table _time, Image, sha256`
 - Result: 21:56:18, `php-cgi.exe` started `cmd.exe /c "3791.exe 2>&1"`, which started `C:\inetpub\wwwroot\joomla\3791.exe` (in the website folder). SHA256 `EC78C938D8453739CA2A370B9C275971EC46CAF6E479DE2B2D04E97CC47FA45D`. `3791.exe` then started `cmd.exe` at 21:58:23 and 22:08:13.
@@ -107,13 +107,13 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7
 
 ## 2026-11-15
 
-**16. Which logs mention `3791.exe`?** (given)
+**16. Which logs mention `3791.exe`?**
 - Search:
     - `index=botsv1 earliest=0 3791.exe | stats count by sourcetype | sort - count`
 - Result: `XmlWinEventLog` 69, `WinEventLog:Security` 3, `stream:http` 2, `fgt_utm` 1, `suricata` 1.
 - Meaning: the file travelled over the network. The web traffic, the firewall and the IDS all saw it.
 
-**17. How did `3791.exe` get onto the server?** (given)
+**17. How did `3791.exe` get onto the server?**
 - Search:
     - `index=botsv1 earliest=0 3791.exe sourcetype IN ("stream:http", "fgt_utm", "suricata") | sort _time`
 - Result:
@@ -124,52 +124,52 @@ Working notes during the investigation. Newest at the bottom. Searches 1-3, 6, 7
 - Meaning: `40.80.148[.]42` uploaded both files with eXtplorer at 21:52:47. The firewall recognised the malware but only logged it (monitor mode), so the file got through. An analyst had about 3.5 minutes to act on that critical alert before the reverse shell (21:56:18). The first `agent.php` upload through the Joomla installer (21:50:31) most likely failed (no success message); the working copy came through eXtplorer. Permissions `777` made the upload easy.
 - Note: the same second shows as 21:52:47 UTC in Splunk, 15:52:47 in the firewall and IDS (UTC-6) and 14:52 in the file list (web server, UTC-7). The timeline uses UTC.
 
-**18. Which logs mention `1.jpeg`?** (given)
+**18. Which logs mention `1.jpeg`?**
 - Search:
     - `index=botsv1 earliest=0 "1.jpeg" | stats count by sourcetype`
 - Result: `XmlWinEventLog` 2, `WinEventLog:Security` 1. No network log.
 - Meaning: only Windows knows the name `1.jpeg`. The file probably had a different name on the network and got the new name when it was saved.
 
-**19. Did the web server download anything?** (given)
+**19. Did the web server download anything?**
 - Search:
     - `index=botsv1 earliest=0 sourcetype=stream:http src_ip=192.168.250.70 | stats count by dest_ip, http_method, site | sort - count`
 - Result: two destinations. `update.joomla.org` (`108.161.187[.]134`) 5 GET; `23.22.63[.]114` (`prankglassinebracket.jumpingcrab[.]com:1337`) 2 GET.
 - Meaning: Joomla checking for updates is normal. A GET to the attacker IP on port 1337 is not. Here the server is the client: the file was pulled (downloaded by the server), not pushed (uploaded). 1337 means "leet" in hacker slang and is not a normal web port.
 
-**20. What did the server download?** (given)
+**20. What did the server download?**
 - Search:
     - `index=botsv1 earliest=0 sourcetype=stream:http src_ip=192.168.250.70 dest_ip=23.22.63[.]114 | table _time, http_method, site, uri_path, status, http_user_agent | sort _time`
 - Result: 22:06:21 and 22:13:46, GET `/poisonivy-is-coming-for-you-batman.jpeg`. Status and user agent are empty.
 - Meaning: both downloads are before `move ..\1.jpeg 2.jpeg` (22:20:10), so the order fits: downloaded, most likely saved as `1.jpeg`, then renamed. The empty user agent means the program did not introduce itself, so it was not a browser. An empty user agent in traffic going out from a server is a detection idea.
 
-**21. Which program made the download?** (given)
+**21. Which program made the download?**
 - Search:
     - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog EventCode=3 DestinationPort=1337 | table _time, Image, SourceIp, DestinationIp, DestinationPort | sort _time`
 - Result: `php-cgi.exe` connected from `192.168.250.70` to `23.22.63[.]114:1337` three times: 22:06:22, 22:13:48, 22:19:11.
-- Meaning: PHP itself made the download, not `cmd.exe`. That is why there is no download command among the 17 `cmd.exe` commands (entry 12): the web shell ran it as PHP code. Hunting only for `cmd.exe` misses this.
+- Meaning: PHP itself made the download, not `cmd.exe`. That is why there is no download command among the 17 `cmd.exe` commands (entry 12): the web shell ran it as PHP code. A search for `cmd.exe` alone would miss this download.
 - Open: Sysmon shows 3 connections, `stream:http` only 2 downloads. Maybe the third was not HTTP, or it failed or was not captured. [OPEN]
 
-**22. Was the web shell used at the download times?** (given)
+**22. Was the web shell used at the download times?**
 - Search:
     - `index=botsv1 earliest="08/10/2016:22:05:00" latest="08/10/2016:22:20:00" sourcetype=stream:http uri_path="/joomla/agent.php" | bin _time span=1m | stats count by _time`
 - Result: 96 requests from `23.22.63[.]114`. Per minute: 22:05 10, 22:06 14, 22:08 1, 22:13 14, 22:15 7, 22:16 7, 22:19 43.
-- Meaning: the bursts at 22:06, 22:13 and 22:19 are in the same minute as the three `php-cgi.exe` connections. `23.22.63[.]114` used the web shell to make the server pull the image from its own server on port 1337 (this conclusion was explained to me on the third try). The 22:05 burst starts with `echo 63059` at 22:05:42, like `echo 24365` at 21:55:22: a test that tells the attacker the web shell still works. It marks the start of each session.
+- Meaning: the bursts at 22:06, 22:13 and 22:19 are in the same minute as the three `php-cgi.exe` connections. `23.22.63[.]114` used the web shell to make the server pull the image from its own server on port 1337. The 22:05 burst starts with `echo 63059` at 22:05:42, like `echo 24365` at 21:55:22: a test that tells the attacker the web shell still works, so each new session starts with one.
 - SPL lesson: `head` before `sort` cut 10 events and hid the 22:05 burst. Sort first, or count per minute with `bin`.
 
-**23. Did the firewall allow the reverse shell?** (given)
+**23. Did the firewall allow the reverse shell?**
 - Search:
     - `index=botsv1 earliest=0 sourcetype=fgt_traffic 23.22.63[.]114 dstport=3791 | table _time, srcip, dstip, dstport, action, sentbyte, rcvdbyte, duration | sort _time`
 - Result: two rows at 22:22:03, both `192.168.250.70` to `23.22.63[.]114`, port 3791.
     - Row 1: `action=close`, `sentbyte` 112,524, `rcvdbyte` 1,336,289 (about 1.3 MB), `duration` 1545 seconds.
     - Row 2: `action=ip-conn`, no bytes.
-- Meaning: a blocked connection cannot move 1.4 MB, so the firewall allowed the reverse shell and the attacker had a working shell. FortiGate writes a traffic log when a connection ends: 22:22:03 minus 1545 seconds (25 min 45 s) is 21:56:18, one second from the Sysmon connection in entry 15 (21:56:19). Same connection, open almost 26 minutes, the whole time the attacker worked on the server. (The start time was worked out for me.) No egress filtering: the web server could open a connection to the internet on an unusual port.
+- Meaning: a blocked connection cannot move 1.4 MB, so the firewall allowed the reverse shell and the attacker had a working shell. FortiGate writes a traffic log when a connection ends: 22:22:03 minus 1545 seconds (25 min 45 s) is 21:56:18, one second from the Sysmon connection in entry 15 (21:56:19). So it is the same connection, and it stayed open for almost 26 minutes while the attacker worked on the server. There was no egress filtering: the web server could open a connection to the internet on an unusual port.
 - `ip-conn` (I looked this up in Fortinet's docs): traffic allowed, but the session closed because the FortiGate got no reply packet. Row 2 is probably a second connection attempt that got no answer, maybe because the attacker's listener was already gone. [OPEN]
 - Source: [Fortinet: ip-conn traffic action in logs](https://community.fortinet.com/fortigate-3/technical-tip-ip-conn-traffic-action-in-logs-99859)
-- Field names: FortiGate uses its own names (`srcip`, `dstip`, `dstport`), Sysmon uses `SourceIp`, `stream:http` uses `src_ip`. Same idea, three names. Check names before searching one sourcetype.
+- Field names: FortiGate calls the source IP `srcip`, Sysmon calls it `SourceIp` and `stream:http` calls it `src_ip`. I check the names before I search one sourcetype.
 
-**24. Why did the reverse shell end?** (given)
+**24. Why did the reverse shell end?**
 - Search:
     - `index=botsv1 earliest=0 sourcetype=XmlWinEventLog 3791.exe EventCode=5 | table _time, Image`
 - Result: 22:21:58, `C:\inetpub\wwwroot\joomla\3791.exe` ended (Sysmon EventCode 5, process ended).
-- Meaning: the program ended at 22:21:58 and the firewall logged the connection close at 22:22:03, 5 seconds later. The reverse shell ended because `3791.exe` stopped. This is about 30 seconds after the last web shell commands (`exit`, 22:21:31 and 22:21:34) and 1.5 minutes after the defacement (22:20:33): the attacker finished the work and closed everything. The `exit` commands went through the web shell (`php-cgi` to `cmd.exe`), not through the reverse shell, so they did not close it directly. (This conclusion was given; I did not answer the check question.)
+- Meaning: the program ended at 22:21:58 and the firewall logged the connection close at 22:22:03, 5 seconds later, so the reverse shell ended because `3791.exe` stopped. This was about 30 seconds after the last web shell commands (`exit`, 22:21:31 and 22:21:34) and 1.5 minutes after the defacement (22:20:33). It looks like the attacker finished and closed everything. The `exit` commands went through the web shell (`php-cgi` to `cmd.exe`), not through the reverse shell, so they did not close it directly.
 - Open: what stopped `3791.exe` (the attacker from their side, or something on the server). [OPEN]
