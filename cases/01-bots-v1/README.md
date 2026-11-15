@@ -76,7 +76,13 @@ The website shows a defacement page: imreallynotbatman[.]com
 
 ## 5. Verdict
 
-[TODO]
+**True positive, H2: an outsider got in. Confidence: high.**
+
+One attacker used two IPs and two tools. `23.22.63[.]114` brute-forced the Joomla admin login and found the password `batman` ([w06b](exhibits/w06b-password-reused-hl.png), [w07](exhibits/w07-batman-time-order-hl.png)). `40.80.148[.]42` logged in with it, opened eXtplorer and uploaded the web shell `agent.php` and the malware `3791.exe` ([w08b](exhibits/w08b-admin-session-extplorer-hl.png), [w17](exhibits/w17-firewall-alert-and-upload-hl.png)). Then `23.22.63[.]114` used the web shell to run commands on the web server, including the two `move` commands that replaced the website image ([w11](exhibits/w11-process-chain-hl.png), [w12](exhibits/w12-webshell-commands-hl.png)). This rules out H1: an external IP changed the page through a web shell, not an admin.
+
+The proof comes from three separate log sources (web traffic, Sysmon and the firewall), and their times match within one or two seconds.
+
+Open: what stopped `3791.exe` at 22:21:58, and why the third `php-cgi.exe` connection at 22:19:11 shows no download.
 
 ## 6. Ticket
 
