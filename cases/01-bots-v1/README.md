@@ -53,7 +53,28 @@ The website shows a defacement page: imreallynotbatman[.]com
 
 | Time (UTC) | Host / IP | What happened | Exhibit |
 |---|---|---|---|
-| [TODO] | | | |
+| [TODO: first scan request] | `40.80.148[.]42` → website | Acunetix web scan of the website (17,483 requests in total) | – |
+| 21:45:21 | `23.22.63[.]114` → website | Python script starts a brute force on the Joomla admin login (`username=admin`, 412 passwords) | [w04](exhibits/w04-python-login-page-hl.png), [w05](exhibits/w05-bruteforce-passwords-hl.png) |
+| 21:46:33 | `23.22.63[.]114` → website | Script tries the password `batman` | [w07](exhibits/w07-batman-time-order-hl.png) |
+| 21:48:05 | `40.80.148[.]42` → website | Browser (Internet Explorer 11) sends `batman`; the admin login works | [w07](exhibits/w07-batman-time-order-hl.png) |
+| 21:50:31 | `40.80.148[.]42` → website | Web shell `agent.php` uploaded through the Joomla Extension Installer (most likely failed) | [w09b](exhibits/w09b-upload-agent-php-hl.png), [w09c](exhibits/w09c-upload-form-headers-2x.png) |
+| 21:51:32 | `40.80.148[.]42` → website | Admin file manager eXtplorer opened | [w08b](exhibits/w08b-admin-session-extplorer-hl.png) |
+| 21:52:45 | Firewall (FortiGate) | Firewall detects `W32/Swrort.C!tr` in `3791.exe`, but only monitors (`action=monitored`) | [w17](exhibits/w17-firewall-alert-and-upload-hl.png) |
+| 21:52:47 | `40.80.148[.]42` → website | `3791.exe` and `agent.php` uploaded through eXtplorer ("Upload successful") | [w17](exhibits/w17-firewall-alert-and-upload-hl.png) |
+| 21:55:22 | `23.22.63[.]114` → `agent.php` | Web shell used for the first time (test command `echo 24365`) | [w10](exhibits/w10-webshell-used-hl.png), [w12](exhibits/w12-webshell-commands-hl.png) |
+| 21:56:18 | `we1149srv` (`192.168.250.70`) | Web shell runs `3791.exe` (trojanized `ab.exe`, VirusTotal 63/68) | [w14a](exhibits/w14a-3791-process-starts-hl.png), [w14b](exhibits/w14b-3791-sha256-hl.png), [w14c](exhibits/w14c-3791-virustotal-hl.png) |
+| 21:56:19 | `192.168.250.70` → `23.22.63[.]114:3791` | Reverse shell to the attacker; the firewall allows it | [w15](exhibits/w15-reverse-shell-hl.png), [w23](exhibits/w23-firewall-reverse-shell-hl.png) |
+| 22:05:42 | `23.22.63[.]114` → `agent.php` | New web shell session (test command `echo 63059`) | [w22b](exhibits/w22b-webshell-first-requests-hl.png) |
+| 22:06:21 | `192.168.250.70` → `23.22.63[.]114:1337` | Web shell makes the server download `poisonivy-is-coming-for-you-batman.jpeg` | [w19](exhibits/w19-server-outbound-http-hl.png), [w20](exhibits/w20-downloaded-file-hl.png), [w21](exhibits/w21-download-process-hl.png), [w22a](exhibits/w22a-webshell-per-minute-hl.png) |
+| 22:13:46 | `192.168.250.70` → `23.22.63[.]114:1337` | Second download of the same image | [w20](exhibits/w20-downloaded-file-hl.png), [w21](exhibits/w21-download-process-hl.png) |
+| 22:19:11 | `192.168.250.70` → `23.22.63[.]114:1337` | Third `php-cgi.exe` connection; no HTTP download seen [OPEN] | [w21](exhibits/w21-download-process-hl.png) |
+| 22:20:10 | `we1149srv` (`192.168.250.70`) | `move ..\1.jpeg 2.jpeg`: the image is moved into the website folder | [w12](exhibits/w12-webshell-commands-hl.png) |
+| 22:20:33 | `we1149srv` (`192.168.250.70`) | `move 2.jpeg imnotbatman.jpg`: the website's image is replaced (defacement) | [w12](exhibits/w12-webshell-commands-hl.png) |
+| 22:21:34 | `23.22.63[.]114` → `agent.php` | Last web shell commands (`exit`) | [w12](exhibits/w12-webshell-commands-hl.png) |
+| 22:21:58 | `we1149srv` (`192.168.250.70`) | `3791.exe` ends | [w24](exhibits/w24-3791-ended-hl.png) |
+| 22:22:03 | Firewall (FortiGate) | Firewall logs the reverse shell closed (open 1545 s, about 1.4 MB moved) | [w23](exhibits/w23-firewall-reverse-shell-hl.png) |
+
+Timeline compiled with AI help from the worklog entries; every row links to its exhibit.
 
 ## 5. Verdict
 
