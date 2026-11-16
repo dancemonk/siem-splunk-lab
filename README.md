@@ -1,7 +1,7 @@
 # siem-splunk-lab
 
 ![ci](https://github.com/dancemonk/siem-splunk-lab/actions/workflows/ci.yml/badge.svg)
-![cases](https://img.shields.io/badge/cases-0%20of%203-lightgrey)
+![cases](https://img.shields.io/badge/cases-1%20of%203-blue)
 
 SOC investigations in Splunk on the Boss of the SOC (BOTS) v1, v2 and v3 datasets,
 with the SPL detections that came out of them.
@@ -10,6 +10,18 @@ Built by Vlad Guliakin, from November 2026.
 Each case starts with an alert and ends with a verdict, a ticket, a shift handover
 note and one detection rule. Splunk runs on my lab laptop; the datasets are linked,
 not copied.
+
+## Featured: Case 01, website defacement (BOTS v1)
+
+A Joomla website on an IIS server was defaced. I traced the attack across web traffic, Sysmon,
+Windows Security and firewall logs: a vulnerability scan, a brute force of the admin login,
+a web shell upload, a Metasploit reverse shell that the firewall allowed, and the image swap
+that defaced the site. The case has a 23-row timeline with a screenshot for every step, a
+verdict, a ticket and a shift handover note.
+
+- Case report: [`cases/01-bots-v1/`](cases/01-bots-v1/)
+- Investigation notes, 32 searches: [`worklog.md`](cases/01-bots-v1/worklog.md)
+- Detection from the case: [D01, web server starts a command shell](detections/d01-web-server-starts-shell.md)
 
 ## Progress
 
