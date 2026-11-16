@@ -8,7 +8,7 @@
 | Tools | Splunk, VirusTotal (hash lookup only), Fortinet docs |
 | ATT&CK | Web attack: T1595.002 Vulnerability Scanning, T1110.001 Password Guessing, T1078 Valid Accounts, T1505.003 Web Shell, T1027 Obfuscated Files or Information, T1059.003 Windows Command Shell, T1033 System Owner/User Discovery, T1087.001 Local Account Discovery, T1135 Network Share Discovery, T1049 System Network Connections Discovery, T1018 Remote System Discovery, T1057 Process Discovery, T1571 Non-Standard Port, T1105 Ingress Tool Transfer, T1491.002 External Defacement |
 | Hours | About 8-10 |
-| Status | Web attack: done (investigation, verdict, ticket, handover, detection D01). Takeaway and hindsight done. Ransomware part not started. |
+| Status | Web attack: done. Ransomware part not started. |
 
 ## 0. Data check (2026-11-10)
 
@@ -105,7 +105,7 @@ The attacker stayed at the rights of `IUSR`, the IIS account for anonymous visit
 
 Ticket INC-01 is escalated to Tier 2 / IR as Critical. The web server `we1149srv` was taken over through the Joomla admin account: the password `batman` was found by brute force. The attacker uploaded a web shell and a Metasploit payload, had a reverse shell for about 26 minutes and replaced the website image. The last attacker activity I found was at 22:22:03 UTC.
 
-First thing to do: change the firewall profile `Honeypot-Access` from monitor to block. It detected `W32/Swrort.C!tr` in `3791.exe` at 21:52:45 but let the file through (`action=monitored`), so the same upload would work again today.
+First thing to do: change the firewall profile `Honeypot-Access` from monitor to block. It detected `W32/Swrort.C!tr` in `3791.exe` at 21:52:45 but let the file through (`action=monitored`), so the same upload would still work.
 
 Also still to do: isolate the server, block `40.80.148[.]42` and `23.22.63[.]114`, reset the admin password, and remove `agent.php` and `3791.exe` after the evidence is saved.
 
