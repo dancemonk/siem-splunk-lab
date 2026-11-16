@@ -17,7 +17,7 @@ not copied.
 |---|---|---|---|
 | 1 | 2026-11-10 | Lab check: Splunk 10.6, BOTS v1 data and fields | Done |
 | 2 | 2026-11-11 to 11-15 | SPL for investigation (`stats`, `rex`, `bin`), BOTS v1 web attack | Done (investigation) |
-| 3 | 2026-11-28 to 11-29 | Case 01 finished (BOTS v1), first detections | Not started |
+| 3 | 2026-11-28 to 11-29 | Case 01 finished (BOTS v1), first detections | Started early: web attack report and D01 done |
 | 4 | 2026-12-05 to 12-06 | BOTS v2, data models and `tstats` (Case 02) | Not started |
 | 5 | 2026-12-12 to 12-13 | BOTS v3, cloud logs (Case 03) | Not started |
 | 6 | 2026-12-19 to 12-20 | Detection pack, scheduled alerts, release | Not started |

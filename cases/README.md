@@ -5,7 +5,7 @@ Each case ends with a verdict, a ticket, a shift handover note and one detection
 
 | Case | Dataset | Topic | Status |
 |---|---|---|---|
-| [01](01-bots-v1/) | BOTS v1 | Website attack (OWASP) and ransomware | In progress: investigation done, report next |
+| [01](01-bots-v1/) | BOTS v1 | Website attack (OWASP) and ransomware | Web attack done, ransomware part not started |
 | 02 | BOTS v2 | [TODO] chosen in weekend 4 | Not started |
 | 03 | BOTS v3 | [TODO] cloud logs, chosen in weekend 5 | Not started |
 

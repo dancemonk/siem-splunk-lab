@@ -8,7 +8,7 @@
 | Tools | Splunk, VirusTotal (hash lookup only), Fortinet docs |
 | ATT&CK | Web attack: T1595.002 Vulnerability Scanning, T1110.001 Password Guessing, T1078 Valid Accounts, T1505.003 Web Shell, T1027 Obfuscated Files or Information, T1059.003 Windows Command Shell, T1033 System Owner/User Discovery, T1087.001 Local Account Discovery, T1135 Network Share Discovery, T1049 System Network Connections Discovery, T1018 Remote System Discovery, T1057 Process Discovery, T1571 Non-Standard Port, T1105 Ingress Tool Transfer, T1491.002 External Defacement |
 | Hours | About 8-10 |
-| Status | Web attack: investigation, verdict, ticket and handover done. Detection D01 done. Takeaway [TODO]. Ransomware part not started. |
+| Status | Web attack: done (investigation, verdict, ticket, handover, detection D01). Takeaway and hindsight done. Ransomware part not started. |
 
 ## 0. Data check (2026-11-10)
 
@@ -47,7 +47,7 @@ The website shows a defacement page: imreallynotbatman[.]com
 
 ## 3. Exhibits
 
-[TODO]
+All screenshots are in [`exhibits/`](exhibits/). File names start with the worklog entry they belong to (`w12-...` is entry 12), and every row in the timeline below links to its screenshots. Highlights mark the rows that matter.
 
 ## 4. Timeline
 
@@ -117,11 +117,18 @@ The attacker stayed at `IUSR` rights and did not create an account (worklog 28 a
 
 ## 9. Takeaway
 
-[TODO]
+An event with empty fields is invisible to a field search. In entry 20 I searched for the downloads by `src_ip` and `dest_ip` and found two. The third download, the one that worked, was in `stream:http` too, but without IPs or a URL, so my search missed it. A plain keyword search (`1337`) found it (entry 32). Before I write "it is not in the logs", I now also search for a plain keyword.
 
 ## 10. Hindsight
 
-[TODO]
+What the company should change:
+
+- Switch the firewall profile `Honeypot-Access` from monitor to block. It detected `W32/Swrort.C!tr` in `3791.exe` and still let the file through.
+- Protect the Joomla admin login with a strong, unique password and MFA, and lock the account after repeated failed logins. `batman` is in common password lists, and the script tried 412 passwords without being stopped.
+- Add egress filtering. The web server should not open connections to the internet on ports like 3791 and 1337.
+- Remove the `777` permissions from the website folders, so the IIS account cannot write files there.
+
+What I would do differently: start with a plain keyword search, then narrow down with fields. Field searches are faster, but they miss events where the fields are empty (entries 20 and 32).
 
 ---
 Indicators are defanged: `hxxp://`, `1.2.3[.]4`.
